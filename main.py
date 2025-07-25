@@ -12,7 +12,7 @@ from rich.table import Table
 
 # Configuration constants
 OLLAMA_HOST = 'http://localhost:11434'
-MODEL_NAME = "gemma3:1b"
+MODEL_NAME = "gemma3:4b"
 MAX_GUESSES = 6
 NUM_GAMES = 9
 WORDLIST_FILE = "wordlist.txt"
@@ -59,7 +59,7 @@ def create_wordle_prompt(game_states: List[Dict[str, Any]]) -> str:
         # f"States: {sanitized_states}\n"
         "The game state as a csv: \n"
         f"{state_csv} \n"
-        "The indicators mean: _r_: r is wrong letter (grey/bad), -s-: s is right letter, wrong spot (yellow/ok), =t=: t is right spot (green/great). \n"
+        "The indicators mean: _r_: r is wrong letter (grey/bad), -S-: S is right letter, wrong spot (yellow/ok), =T=: T is right spot (green/great). \n"
         "---\n"
         "First, do some reasoning about each board. "
         "Second, do some reasoning about the letters you see. "
@@ -95,8 +95,9 @@ def get_agent_guess(game_states: List[Dict[str, Any]]) -> str:
 
 
 def is_valid_guess(guess: str) -> bool:
-    """Check if a guess is valid (5 letters, alphabetic, lowercase)."""
-    return len(guess) == 5 and guess.isalpha() and guess.islower()
+    """Check if a guess is valid (5 letters, alphabetic, lowercase). Case is optional."""
+    guess = guess.lower()
+    return len(guess) == 5 and guess.isalpha()
 
 
 def generate_feedback(guess: str, target_word: str) -> List[str]:
@@ -248,28 +249,35 @@ def format_colored_guess(guess: str, feedback: List[str]) -> str:
 
 
 def extract_final_guess(llm_response: str) -> str:
-    """
-    Extract the final guess from the LLM response.
-    Args:
-        llm_response: The response text from the LLM.
-    Returns:
-        The extracted 5-letter word guess.
-    """
-    # Look for the 'Final Guess:' marker
-    start_index = llm_response.find(FINAL_GUESS_MARKER)
+    """Extracts the 5-letter guess from the oracle's full response."""
+    response_lower = llm_response.lower().strip()
+    start_index = response_lower.find(FINAL_GUESS_MARKER.lower())
+    guess_text = response_lower[start_index + len(FINAL_GUESS_MARKER):].strip()
+    guess_text = ''.join([ch for ch in guess_text if ch.isalpha() or ch.isspace()])
 
     if start_index != -1:
-        # Extract the text after the marker
-        guess = llm_response[start_index + len(FINAL_GUESS_MARKER):].strip().split()[0]
-        guess = guess.lower()
-
-        # Validate the guess
-        if is_valid_guess(guess):
-            return guess
+        # Extract the word immediately following the marker
+        potential_guess = guess_text.strip()
+        # Find the first 5-letter word in the remaining string
+        for word in potential_guess.split():
+            cleaned_word = ''.join([ch for ch in word if ch.isalpha()])
+            if is_valid_guess(cleaned_word):
+                return cleaned_word
+    
+    # Fallback: find the last valid 5-letter word in the entire response
+    response_no_punctuation_spaces_ok = ''.join([c for c in llm_response if c.isalpha() or c.isspace()]).lower()
+    all_words = [''.join(filter(str.isalpha, word)) for word in response_no_punctuation_spaces_ok.split()]
+    all_words = [word for word in all_words if len(word) == 5]
+    valid_guesses = [word for word in all_words if is_valid_guess(word)]
+    if valid_guesses:
+        return valid_guesses[-1]
         
-    # If no valid guess found, try to find one from the wordlist
-    print("No valid 'Final Guess' found, trying to find a valid guess from the wordlist.")
-    return find_closest_from_wordlist(llm_response)
+    # Final fallback if no valid guess is found
+    print("Warning: Oracle did not produce a valid 5-letter guess. Returning 'audio'.")
+    common_guesses = ["crane", "slate", "trace", "crate",
+                    "stare", "adieu", "audio",
+                    "arise", "roast", "raise"]
+    return random.choice(common_guesses)
 
 
 def find_closest_from_wordlist(text: str) -> str:
@@ -348,12 +356,16 @@ def generate_csv_content(game_states: List[Dict[str, Any]]) -> str:
 
 def format_csv_guess(guess: str, feedback: List[str]) -> str:
     """Format a guess for CSV output with feedback indicators."""
-    return "".join(
-        f"={letter}=" if color == "green" else
-        f"-{letter}-" if color == "yellow" else
-        f"_{letter}_"
-        for letter, color in zip(guess, feedback)
-    )
+    result = ''
+    for letter, color in zip(guess, feedback):
+        big_letter = letter.upper()
+        result += "".join(
+            f"={big_letter}=" if color == "green" else
+            f"-{big_letter}-" if color == "yellow" else
+            f"_{letter}_"
+            
+        )
+    return result
 
 
 def save_csv_report(game_states: List[Dict[str, Any]], output_file: str = "game_progress.csv") -> None:
@@ -421,7 +433,8 @@ def main() -> None:
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     
     # Save JSON report
-    json_filename = f"reports/game_{timestamp}.json"
+    clean_model_name = MODEL_NAME.replace(":", "-").replace("/", "--")
+    json_filename = f"reports/game_{clean_model_name}_{timestamp}.json"
     save_report(report, json_filename)
     
     # Save CSV report
@@ -430,4 +443,9 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    count = 9
+    for _ in range(count):
+        print(f"Running game {_ + 1} of {count}")
+        main()
+        time.sleep(1)
+    print('done')

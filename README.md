@@ -25,6 +25,35 @@ py-wordle9-rl is a reinforcement learning project that extends the popular word-
 
 -----
 
+## Goal
+
+### Fine Tune with Unsloth
+
+To train a model with Unsloth, you need to generate a dataset of high-quality examples. The goal is to create pairs of (prompt, ideal_response). This process is Supervised Fine-Tuning (SFT). SFT teaches the model by showing it correct input-output pairs.
+
+The standard format for Unsloth is a JSONL file where each line is a JSON object. The ChatML/ShareGPT format is recommended.
+
+ChatML Format Example:
+
+```JSON
+
+{"messages": [{"role": "user", "content": "The Wordle game state prompt..."}, {"role": "assistant", "content": "The ideal reasoning and final guess..."}]}
+{"messages": [{"role": "user", "content": "Another Wordle game state prompt..."}, {"role": "assistant", "content": "Another ideal reasoning and final guess..."}]}
+```
+
+- user content: The prompt (create_wordle_prompt).
+- assistant content: A high-quality, "expert" response that you want the model to learn to emulate.
+
+### Details
+
+The primary challenge is generating the assistant content. Your current code uses the gemma3:1b model to generate a guess. For training, you want a response that is better than what your base model can produce. This is achieved using an oracle. The oracle is a source of high-quality data.
+
+There are two primary methods for generating this oracle data:
+
+1. Use a Stronger LLM: Use a more capable model (e.g., GPT-4, Claude 3 Opus) as the oracle. You would send it the same prompt and save its superior response as the target assistant content for training your smaller model.
+
+2. Use an Algorithm: Develop a deterministic Wordle-solving algorithm to find the optimal guess. You would then use an LLM to generate plausible human-like reasoning that leads to that optimal guess.
+
 ## How it Works
 
 The project operates in rounds. In each round:
