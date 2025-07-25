@@ -1,14 +1,14 @@
 
-# w9rdle-RL
+# py-wordle9-rl
 
-w9rdle-RL is a reinforcement learning project that extends the popular word-guessing game, Wordle. This project challenges an AI agent to play nine Wordle games concurrently, providing a single guess across all active boards.
+py-wordle9-rl is a reinforcement learning project that extends the popular word-guessing game, Wordle. This project challenges an AI agent to play nine Wordle games concurrently, providing a single guess across all active boards.
 
 -----
 
 ## Features
 
   - **Nine Simultaneous Games**: Generates and manages nine independent Wordle games at once.
-  - **Unified Guessing**: An integrated agent observes all nine game boards but is limited to proposing one word guess applicable to all games.
+  - **Unified Guessing**: An integrated agent observes all nine game boards but is limited to proposing one word guess applicable to all games. Learn 9x faster?
   - **Standard Wordle Mechanics**: Implements typical Wordle feedback (green for correct letter and position, yellow for correct letter wrong position, grey for incorrect letter).
   - **LLM Integration**: Utilizes **Ollama** for large language model (LLM) reasoning to inform the agent's guessing strategy.
   - **Game Generation**: Randomly selects nine distinct 5-letter words from a standard Wordle wordlist for each game instance.
@@ -43,8 +43,8 @@ The project operates in rounds. In each round:
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-username/w9rdle-RL.git
-cd w9rdle-RL
+git clone https://github.com/shanecandoit/py-wordle9-rl.git
+cd py-wordle9-rl
 
 # Install Python dependencies
 pip install -r requirements.txt
@@ -58,7 +58,7 @@ pip install -r requirements.txt
 ## Usage
 
 ```bash
-# Run the w9rdle-RL simulation
+# Run the py-wordle9-rl simulation
 python main.py
 ```
 
